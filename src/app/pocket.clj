@@ -1,46 +1,47 @@
 (ns app.pocket
- (:require [environ.core :refer [env]]
-            [clojure.data.json :as json]
+  (:require [clojure.data.json :as json]
             [clj-http.client :as http]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [aero.core :refer [read-config]]))
+
+;; parameters
+(def default-url "https://www.google.com")
+(def headers-json
+  {"X-Accept" "application/json"
+   "Content-Type" "application/json"})
+(def pocket-url "https://getpocket.com/v3/oauth/")
 
 ;; Functions
-(defn read-env
-  "Reads in a local .env file and returns the contents as a map of key-value pairs."
-  []
-  (let [env-string (slurp "./.env")
-        env-lines (str/split-lines env-string)
-        env-pairs (map #(str/split % #"=") env-lines)]
-    (into {} env-pairs)))
+(defn consumer-key
+  "Read config file for consumer key"
+  [file]
+  (:consumer_key (read-config file)))
 
-
-(defn get-code-token []
-    (let [consumer-token (get (read-env) "CONSUMER_KEY")
-           json-resp (http/post "https://getpocket.com/v3/oauth/request"
-                               { :headers { "Content-Type" "application/json"
-                                          "X-Accept" "application/json"}}
-                                { :body (json/write-str {:redirect_uri "http://www.google.com"
-                                                      :consumer_key consumer-token}) } )
-          list-resp (json/read-str json-resp)
-          data (:code list-resp)]
-      ))
-(get-code-token)
-
-(defn get-auth-token []
+(defn get-code-token
+  "Gets the code token from pocket API with consumer key and the redirect link."
+  [consumer-key, redirect-uri]
   (let [json-resp
-        (http/post "https://getpocket.com/v3/oauth/authorize"
-                             { :headers { "Content-Type" "application/json"
-                                        "X-Accept" "application/json"}}
-                             { :body (json/write-str {:consumer_key consumer-token
-                                                    :code code-token})})
+        (http/post (str pocket-url "request")
+         {:headers headers-json
+          :body (json/write-str {:redirect_uri redirect-uri
+                                 :consumer_key consumer-key})})
+        list-resp (get (json/read-str (json-resp :body)) "code")]
+    list-resp))
 
-        list-resp (json/read-str json-resp)
-        data (:access_token list-resp)]
-    (set! auth-token data)))
+(defn redirect-link
+  "Create authorisation link with request-token and redirect uri."
+  [request-token redirect-uri]
+  (println (format "https://getpocket.com/auth/authorize?request_token=%s&redirect_uri=%s" request-token redirect-uri)))
 
+(defn get-auth-token
+  "Gets authorisation token from Pocket API with the consumer token and code token generated from get-code-token"
+  [consumer-key code-token]
+  (let [json-resp
+        (http/post (str pocket-url "authorize")
+                   {:headers headers-json
+                    :body (json/write-str {:consumer_key consumer-key
+                                           :code code-token})
+                    :debug true
+                    :throw-exceptions false})
 
-(defn auth []
-  (do
-    (get-code-token)
-    (get-auth-token)))
-
+        json-resp]))
