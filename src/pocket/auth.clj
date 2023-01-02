@@ -1,8 +1,10 @@
-(ns app.pocket
+(ns pocket.auth
   (:require [clojure.data.json :as json]
             [clj-http.client :as http]
             [clojure.string :as str]
-            [aero.core :refer [read-config]]))
+            [aero.core :refer [read-config]]
+            [clojure.java.browse :as browse]
+            [pocket.helpers :refer [write-config]]))
 
 ;; parameters
 (def default-url "https://www.google.com")
@@ -22,16 +24,19 @@
   [consumer-key, redirect-uri]
   (let [json-resp
         (http/post (str pocket-url "request")
-         {:headers headers-json
-          :body (json/write-str {:redirect_uri redirect-uri
-                                 :consumer_key consumer-key})})
+                   {:headers headers-json
+                    :body (json/write-str {:redirect_uri redirect-uri
+                                           :consumer_key consumer-key})
+                    :debug true
+                    :throw-exceptions false})
         list-resp (get (json/read-str (json-resp :body)) "code")]
     list-resp))
 
 (defn redirect-link
   "Create authorisation link with request-token and redirect uri."
   [request-token redirect-uri]
-  (println (format "https://getpocket.com/auth/authorize?request_token=%s&redirect_uri=%s" request-token redirect-uri)))
+  (browse/browse-url (format "https://getpocket.com/auth/authorize?request_token=%s&redirect_uri=%s" request-token redirect-uri))
+  request-token)
 
 (defn get-auth-token
   "Gets authorisation token from Pocket API with the consumer token and code token generated from get-code-token"
@@ -42,6 +47,21 @@
                     :body (json/write-str {:consumer_key consumer-key
                                            :code code-token})
                     :debug true
-                    :throw-exceptions false})
+                    :throw-exceptions false})]
+    json-resp))
 
-        json-resp]))
+(defn auth
+  "Authenticate new user with Pocket API."
+  []
+  ;; authenticate code token
+  (if-not (:code-token (read-config "config.edn"))
+    (-> "config.edn"
+        consumer-key
+        (get-code-token default-url)
+        (redirect-link default-url)
+        (write-config :code-token))
+    (let [consumer-key (consumer-key "config.edn")
+          code-token (:code-token (read-config "config.edn"))
+          auth-resp (get-auth-token consumer-key code-token)
+          auth-token (:value (get (:cookies auth-resp) "AUTH_BEARER_default"))]
+      (write-config auth-token :auth-token))))
