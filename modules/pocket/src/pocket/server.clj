@@ -2,7 +2,7 @@
   (:import (java.net ServerSocket BindException))
   (:require [org.httpkit.server :as server]
             [clojure.data.json :as json]
-            [clj-http.client :as http]
+            [org.httpkit.client :as http]
             [pocket.helpers :refer [write-config, headers-json, default-url, get-key, pocket-url]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;PORT FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

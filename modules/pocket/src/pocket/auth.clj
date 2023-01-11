@@ -1,6 +1,6 @@
 (ns pocket.auth
   (:require [clojure.data.json :as json]
-            [clj-http.client :as http]
+            [org.httpkit.client :as http]
             [clojure.string :as str]
             [aero.core :refer [read-config]]
             [clojure.java.browse :as browse]
