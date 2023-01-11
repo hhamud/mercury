@@ -5,6 +5,7 @@
 
 ;;Parameters
 
+(def pocket-url "https://getpocket.com/v3/oauth/")
 (def default-url "pocketapp93023:authorizationFinished")
 (def headers-json
   {"X-Accept" "application/json"
@@ -16,7 +17,7 @@
   "Writes key value pair to config.edn."
   [key value]
   (let [data (read-string (slurp "config.edn"))
-        updated-data (assoc data value key)
+        updated-data (assoc data key value)
         edn-string (pr-str updated-data)]
     (spit "config.edn" edn-string)))
 

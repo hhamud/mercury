@@ -1,9 +1,9 @@
 (ns pocket.server
-  (:require [org.httpkit.server :as server])
-  (:import (java.net ServerSocket BindException)))
-
-
-
+  (:import (java.net ServerSocket BindException))
+  (:require [org.httpkit.server :as server]
+            [clojure.data.json :as json]
+            [clj-http.client :as http]
+            [pocket.helpers :refer [write-config, headers-json, default-url, get-key, pocket-url]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;PORT FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -41,6 +41,18 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;SERVER FUNCTIONS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn get-auth-token
+  "Gets authorisation token from Pocket API with the consumer token and code token generated from get-code-token"
+  [consumer-key code-token]
+  (let [json-resp
+        (http/post (str pocket-url "authorize")
+                   {:headers headers-json
+                    :body (json/write-str {:consumer_key consumer-key
+                                           :code code-token})})
+        auth-token (get (json/read-str (json-resp :body)) "access_token")]
+    (write-config :access-token auth-token)
+    (println auth-token)))
+
 (defn handler
   "A function that handles all requests from the server.
   Arguments: `req` is a ring request hash-map
@@ -48,7 +60,7 @@
   [req]
   {:status  200
    :headers {}
-   :body    ()})
+   :body    (get-auth-token (get-key :consumer-key) (get-key :code-token))})
 
 (defn create-server
   "A ring-based server listening to all http requests
@@ -67,18 +79,11 @@
     (@api-server :timeout 100)
     (reset! api-server nil)))
 
-
-
 (defn pocket-server
   "Start a httpkit server with a random port
   #' enables hot-reload of the handler function and anything that code calls"
-  [fn & args]
+  []
   (let [ip "127.0.0.1"
-        port 8000
-        num-args (count (:arglists fn))
-        arg-list (take num-args args)]
-
+        port 8000]
     (println (format "INFO: Starting httpkit server on IP:%s port:%s" ip, port))
-    (apply fn arg-list)
     (reset! api-server (server/run-server #'handler {:port port}))))
-
