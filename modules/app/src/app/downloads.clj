@@ -1,10 +1,9 @@
-(ns app.downloads
+(ns app.download
   (:require [pocket.retrieve :refer [get-articles]]
             [clojure.data.json :refer [read-str]]
             [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
-            [clojure.string :as str])
-  (:gen-class))
+            [clojure.string :as str]))
 
 
 (def home (System/getProperty "user.home"))
