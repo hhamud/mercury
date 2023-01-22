@@ -1,8 +1,10 @@
 {:paths ["modules"]
  :deps {mercury/pocket {:local/root "modules/pocket"}
-        mercury/app {:local/root "modules/app"}}
+        mercury/app {:local/root "modules/app"}
+        mercury/inspect {:local/root "modules/inspect"}
+        }
  :aliases
- {:run-m {:main-opts ["-m" "app.mercury"]}
+ {
   :build {:deps {io.github.seancorfield/build-clj
                  {:git/tag "v0.8.2" :git/sha "0ffdb4c"
                   ;; since we're building an app uberjar, we do not
